@@ -1,0 +1,201 @@
+======================================================================
+           TECHVERSE SOLUTIONS - ENTERPRISE NETWORK CONFIGS
+                     SUBMITTED BY: MUHAMMAD HASNAIN (0182)
+======================================================================
+
+----------------------------------------------------------------------
+1. HQ-SWITCH (VLAN & TRUNKING)
+----------------------------------------------------------------------
+enable
+configure terminal
+vlan 10
+ name Server_Farm
+vlan 20
+ name Management
+exit
+
+interface range FastEthernet 0/1 - 24
+ switchport mode access
+ switchport access vlan 10
+ no shutdown
+exit
+
+interface GigabitEthernet 0/1
+ switchport mode trunk
+ no shutdown
+exit
+
+----------------------------------------------------------------------
+2. HQ-ASBR (CORE GATEWAY & ROUTE REDISTRIBUTION)
+----------------------------------------------------------------------
+enable
+configure terminal
+
+interface GigabitEthernet 0/1
+ no ip address
+ shutdown
+exit
+
+interface GigabitEthernet 0/2
+ no ip address
+ shutdown
+exit
+
+interface GigabitEthernet 0/0
+ no shutdown
+exit
+
+interface GigabitEthernet 0/0.10
+ encapsulation dot1Q 10
+ ip address 10.1.10.1 255.255.255.0
+ no shutdown
+exit
+
+interface GigabitEthernet 0/0.20
+ encapsulation dot1Q 20
+ ip address 10.1.20.1 255.255.255.0
+ no shutdown
+exit
+
+interface Serial 0/0/0
+ ip address 10.255.1.1 255.255.255.252
+ no shutdown
+exit
+
+interface Serial 0/0/1
+ ip address 10.255.2.1 255.255.255.252
+ no shutdown
+exit
+
+interface Serial 0/1/0
+ ip address 10.255.3.1 255.255.255.252
+ no shutdown
+exit
+
+router ospf 1
+ network 10.1.10.0 0.0.0.255 area 0
+ network 10.1.20.0 0.0.0.255 area 0
+ network 10.255.1.0 0.0.0.3 area 0
+ redistribute eigrp 100 subnets
+ redistribute rip subnets
+exit
+
+router eigrp 100
+ network 10.255.2.0 0.0.0.3
+ redistribute ospf 1 metric 10000 100 255 1 1500
+ redistribute rip metric 10000 100 255 1 1500
+exit
+
+router rip
+ version 2
+ no auto-summary
+ network 10.255.3.0
+ redistribute ospf 1 metric 5
+ redistribute eigrp 100 metric 5
+exit
+
+ip route 10.2.30.0 255.255.254.0 10.255.1.2
+ip route 10.3.40.0 255.255.255.0 10.255.2.2
+ip route 10.4.50.0 255.255.255.0 10.255.3.2
+exit
+
+----------------------------------------------------------------------
+3. BR1-ROUTER (BRANCH 1 - OSPF CORE)
+----------------------------------------------------------------------
+enable
+configure terminal
+
+interface GigabitEthernet 0/1
+ no ip address
+ shutdown
+exit
+
+interface GigabitEthernet 0/0
+ ip address 10.2.30.1 255.255.254.0
+ no shutdown
+exit
+
+interface Serial 0/0/0
+ ip address 10.255.1.2 255.255.255.252
+ no shutdown
+exit
+
+router ospf 1
+ network 10.2.30.0 0.0.1.255 area 0
+ network 10.255.1.0 0.0.0.3 area 0
+exit
+
+ip route 0.0.0.0 0.0.0.0 10.255.1.1
+exit
+
+----------------------------------------------------------------------
+4. BR2-ROUTER (BRANCH 2 - EIGRP CORE)
+----------------------------------------------------------------------
+enable
+configure terminal
+
+interface GigabitEthernet 0/1
+ no ip address
+ shutdown
+exit
+
+interface GigabitEthernet 0/0
+ ip address 10.3.40.1 255.255.255.0
+ no shutdown
+exit
+
+interface Serial 0/0/0
+ ip address 10.255.2.2 255.255.255.252
+ no shutdown
+exit
+
+router eigrp 100
+ network 10.3.40.0 0.0.0.255
+ network 10.255.2.0 0.0.0.3
+ no auto-summary
+exit
+
+ip route 0.0.0.0 0.0.0.0 10.255.2.1
+exit
+
+----------------------------------------------------------------------
+5. BR3-ROUTER (BRANCH 3 - RIPV2 CORE)
+----------------------------------------------------------------------
+enable
+configure terminal
+
+interface GigabitEthernet 0/1
+ no ip address
+ shutdown
+exit
+
+interface GigabitEthernet 0/0
+ ip address 10.4.50.1 255.255.255.0
+ no shutdown
+exit
+
+interface Serial 0/0/0
+ ip address 10.255.3.2 255.255.255.252
+ no shutdown
+exit
+
+router rip
+ version 2
+ no auto-summary
+ network 10.4.50.0
+ network 10.255.3.0
+exit
+
+ip route 0.0.0.0 0.0.0.0 10.255.3.1
+exit
+
+----------------------------------------------------------------------
+6. BRANCH SWITCHES (BR1-SWITCH, BR2-SWITCH, BR3-SWITCH)
+----------------------------------------------------------------------
+enable
+configure terminal
+interface GigabitEthernet 0/1
+ switchport mode access
+ switchport access vlan 1
+ no shutdown
+exit
